@@ -1,8 +1,8 @@
-;;; undohist.el --- Record and recover undo history
+;;; undohist.el --- Persistent Undo History for GNU Emacs
 
-;; Copyright (C) 2009  MATSUYAMA Tomohiro
+;; Copyright (C) 2009, 2010, 2011  Tomohiro Matsuyama
 
-;; Author: MATSUYAMA Tomohiro <t.matsuyama.pub@gmail.com>
+;; Author: MATSUYAMA Tomohiro <tomo@cx4a.org>
 ;; Keywords: convenience
 
 ;; This program is free software; you can redistribute it and/or modify
