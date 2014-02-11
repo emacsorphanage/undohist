@@ -1,9 +1,11 @@
-;;; undohist.el --- Persistent Undo History for GNU Emacs
+;;; undohist.el --- Persistent undo history for GNU Emacs
 
-;; Copyright (C) 2009, 2010, 2011  Tomohiro Matsuyama
+;; Copyright (C) 2009, 2010, 2011, 2012, 2013  Tomohiro Matsuyama
 
 ;; Author: MATSUYAMA Tomohiro <tomo@cx4a.org>
+;; Package-Requires: ((cl-lib "1.0"))
 ;; Keywords: convenience
+;; Version: 0.1
 
 ;; This program is free software; you can redistribute it and/or modify
 ;; it under the terms of the GNU General Public License as published by
@@ -34,6 +36,13 @@
 
 ;;; Code:
 
+(require 'cl-lib)
+
+(defgroup undohist nil
+  "Persistent undo history."
+  :prefix "undohist-"
+  :group 'undohist)
+
 (defcustom undohist-directory
   (expand-file-name
    (concat
@@ -41,7 +50,13 @@
         user-emacs-directory
       "~/.emacs.d")
     "/undohist"))
-  "A directory being stored undo history files.")
+  "A directory being stored undo history files."
+  :type 'undohist)
+
+(defcustom undohist-ignored-files nil
+  "List of regexps or functions matching file names to ignore the
+recovering of undo history."
+  :type 'undohist)
 
 (defun undohist-initialize ()
   "Initialize undo history facilities.
