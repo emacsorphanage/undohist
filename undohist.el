@@ -136,6 +136,14 @@ To use undohist, you just call this function."
        a))
    tree))
 
+(defun undohist-recover-file-p (file)
+  "Return t if undo history of FILE should be recovered."
+  (not (cl-some (lambda (matcher)
+                  (if (stringp matcher)
+                      (string-match matcher file)
+                    (funcall matcher file)))
+                undohist-ignored-files)))
+
 (defun undohist-save ()
   "Save undo history."
   (interactive)
@@ -151,24 +159,25 @@ To use undohist, you just call this function."
 (defun undohist-recover ()
   "Recover undo history."
   (interactive)
-  (let ((buffer (current-buffer))
-        (file (make-undohist-file-name (buffer-file-name)))
-        undo-list)
-    (if (not (file-exists-p file))
-        '(message "Undo history file doesn't exists.")
-      (when (or (null buffer-undo-list)
-                (yes-or-no-p "buffer-undo-list is not empty. Do you want to recover now? "))
-        (with-temp-buffer
-          (insert-file-contents file)
-          (goto-char (point-min))
-          (let ((alist (undohist-decode (read (current-buffer)))))
-            (if (string= (md5 buffer) (assoc-default 'digest alist))
-                (setq undo-list (assoc-default 'undo-list alist))
-              (message "File digest doesn't match, so undo history will be discarded."))))
-        (if (consp undo-list)
-            (setq buffer-undo-list undo-list))))))
+  (let* ((buffer (current-buffer))
+         (file (buffer-file-name buffer))
+         (undo-file (make-undohist-file-name file))
+         undo-list)
+    (when (and (undohist-recover-file-p file)
+               (file-exists-p undo-file)
+               (or (null buffer-undo-list)
+                   (yes-or-no-p "buffer-undo-list is not empty. Do you want to recover now? ")))
+      (with-temp-buffer
+        (insert-file-contents undo-file)
+        (goto-char (point-min))
+        (let ((alist (undohist-decode (read (current-buffer)))))
+          (if (string= (md5 buffer) (assoc-default 'digest alist))
+              (setq undo-list (assoc-default 'undo-list alist))
+            (message "File digest doesn't match, so undo history will be discarded."))))
+      (if (consp undo-list)
+          (setq buffer-undo-list undo-list)))))
 
-(defun undohist-test ()
+(defun undohist--test ()
   (require 'cl)
   (loop for f to 100
         with filename = "/tmp/undohist-test"
