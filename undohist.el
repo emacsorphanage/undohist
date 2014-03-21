@@ -64,8 +64,8 @@ To use undohist, you just call this function."
   (interactive)
   (if (not (file-directory-p undohist-directory))
       (make-directory undohist-directory t))
-  (add-hook 'after-save-hook 'undohist-save)
-  (add-hook 'find-file-hook 'undohist-recover))
+  (add-hook 'before-save-hook 'undohist-save-safe)
+  (add-hook 'find-file-hook 'undohist-recover-safe))
 
 (defun make-undohist-file-name (file)
   (setq file (convert-standard-filename (expand-file-name file)))
@@ -84,26 +84,35 @@ To use undohist, you just call this function."
               undohist-directory)))
 
 (defun undohist-walk-tree (function tree)
-  (if (consp tree)
-      (let ((value (funcall function tree)))
-        (if (eq value tree)
-            (let* ((cons (cons (undohist-walk-tree function (car tree)) nil))
-                   (cur cons)
-                   cdr)
-              (while tree
-                (setq cdr (cdr tree))
-                (if (consp cdr)
-                    (let (next)
-                      (setq next (cons (undohist-walk-tree function (car cdr)) nil))
-                      (setcdr cur next)
-                      (setq cur next)
-                      (setq tree cdr))
-                  (setcdr cur (undohist-walk-tree function cdr))
-                  (setq tree nil)))
-              cons)
-          value))
-    (if tree
-        (funcall function tree))))
+  (cond
+   ((consp tree)
+    (let ((value (funcall function tree)))
+      (if (eq value tree)
+          (let* ((cons (cons (undohist-walk-tree function (car tree)) nil))
+                 (cur cons)
+                 cdr)
+            (while tree
+              (setq cdr (cdr tree))
+              (if (consp cdr)
+                  (let (next)
+                    (setq next (cons (undohist-walk-tree function (car cdr)) nil))
+                    (setcdr cur next)
+                    (setq cur next)
+                    (setq tree cdr))
+                (setcdr cur (undohist-walk-tree function cdr))
+                (setq tree nil)))
+            cons)
+        value)))
+   ((vectorp tree)
+    (let ((value (funcall function tree)))
+      (if (eq value tree)
+          (cl-loop with length = (length tree)
+                   with vector = (make-vector length nil)
+                   for i from 0 below length
+                   do (aset vector i (undohist-walk-tree function (aref tree i)))
+                   finally return vector)
+        value)))
+   (tree (funcall function tree))))
 
 (defun undohist-encode (tree)
   "Encode `TREE' so that it can be stored as a file."
@@ -113,6 +122,8 @@ To use undohist, you just call this function."
       ((markerp a)
        (cons (if (marker-insertion-type a) 'marker* 'marker)
              (marker-position a)))
+      ((overlayp a)
+       `(overlay ,(overlay-start a) ,(overlay-end a)))
       ((stringp a)
        (substring-no-properties a))
       (t a)))
@@ -131,8 +142,16 @@ To use undohist, you just call this function."
              (set-marker marker (cdr a))
              (set-marker-insertion-type marker t)
              marker))
-          (t
-           a))
+          ((eq (car a) 'overlay)
+           (let ((start (cadr a))
+                 (end (caddr a)))
+             (if (and start end)
+                 (make-overlay (cadr a) (caddr a))
+               ;; Make deleted overlay
+               (let ((overlay (make-overlay (point-min) (point-min))))
+                 (delete-overlay overlay)
+                 overlay))))
+          (t a))
        a))
    tree))
 
@@ -144,21 +163,27 @@ To use undohist, you just call this function."
                     (funcall matcher file)))
                 undohist-ignored-files)))
 
+(defun undohist-save-1 ()
+  (when (consp buffer-undo-list)
+    (let ((file (make-undohist-file-name (buffer-file-name)))
+          (contents `((digest . ,(md5 (current-buffer)))
+                      (undo-list . ,(undohist-encode buffer-undo-list)))))
+      (with-temp-buffer
+        (print contents (current-buffer))
+        (write-region (point-min) (point-max) file nil 0)
+        (set-file-modes file ?\600)))))
+
+(defun undohist-save-safe ()
+  (condition-case var
+      (undohist-save-1)
+    (error (message "Can not save undo history: %s" var))))
+
 (defun undohist-save ()
   "Save undo history."
   (interactive)
-  (if (consp buffer-undo-list)
-      (let ((file (make-undohist-file-name (buffer-file-name)))
-            (contents `((digest . ,(md5 (current-buffer)))
-                        (undo-list . ,(undohist-encode buffer-undo-list)))))
-        (with-temp-buffer
-          (print contents (current-buffer))
-          (write-region (point-min) (point-max) file nil 0)
-          (set-file-modes file ?\600)))))
+  (undohist-save-safe))
 
-(defun undohist-recover ()
-  "Recover undo history."
-  (interactive)
+(defun undohist-recover-1 ()
   (let* ((buffer (current-buffer))
          (file (buffer-file-name buffer))
          (undo-file (make-undohist-file-name file))
@@ -174,8 +199,18 @@ To use undohist, you just call this function."
           (if (string= (md5 buffer) (assoc-default 'digest alist))
               (setq undo-list (assoc-default 'undo-list alist))
             (message "File digest doesn't match, so undo history will be discarded."))))
-      (if (consp undo-list)
-          (setq buffer-undo-list undo-list)))))
+      (when (consp undo-list)
+        (setq buffer-undo-list undo-list)))))
+
+(defun undohist-recover-safe ()
+  (condition-case var
+      (undohist-recover-1)
+    (error (message "Can not recover undo history: %s" var))))
+
+(defun undohist-recover ()
+  "Recover undo history."
+  (interactive)
+  (undohist-recover-safe))
 
 (defun undohist--test ()
   (require 'cl)
