@@ -68,7 +68,7 @@ To use undohist, you just call this function."
   (add-hook 'find-file-hook 'undohist-recover-safe))
 
 (defun make-undohist-file-name (file)
-  (setq file (convert-standard-filename (expand-file-name file)))
+  (setq file (expand-file-name file))
   (if (eq (aref file 1) ?:)
       (setq file (concat "/"
                          "drive_"
