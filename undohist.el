@@ -1,8 +1,8 @@
 ;;; undohist.el --- Persistent undo history for GNU Emacs
 
-;; Copyright (C) 2009, 2010, 2011, 2012, 2013, 2014  Tomohiro Matsuyama
+;; Copyright (C) 2009-2015  Tomohiro Matsuyama
 
-;; Author: MATSUYAMA Tomohiro <tomo@cx4a.org>
+;; Author: MATSUYAMA Tomohiro <m2ym.pub@gmail.com>
 ;; Package-Requires: ((cl-lib "1.0"))
 ;; Keywords: convenience
 ;; Version: 0.2
