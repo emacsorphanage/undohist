@@ -164,7 +164,8 @@ To use undohist, you just call this function."
                 undohist-ignored-files)))
 
 (defun undohist-save-1 ()
-  (when (consp buffer-undo-list)
+  (when (and (consp buffer-undo-list)
+             (undohist-recover-file-p (buffer-file-name (current-buffer))))
     (let ((file (make-undohist-file-name (buffer-file-name)))
           (contents `((digest . ,(md5 (current-buffer)))
                       (undo-list . ,(undohist-encode buffer-undo-list)))))
