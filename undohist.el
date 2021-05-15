@@ -1,4 +1,4 @@
-;;; undohist.el --- Persistent undo history for GNU Emacs
+;;; undohist.el --- Persistent undo history for GNU Emacs -*- lexical-binding: t; -*-
 
 ;; Copyright (C) 2009-2015  Tomohiro Matsuyama
 
@@ -57,15 +57,6 @@
   "List of regexps or functions matching file names to ignore the
 recovering of undo history."
   :type 'undohist)
-
-(defun undohist-initialize ()
-  "Initialize undo history facilities.
-To use undohist, you just call this function."
-  (interactive)
-  (if (not (file-directory-p undohist-directory))
-      (make-directory undohist-directory t))
-  (add-hook 'before-save-hook 'undohist-save-safe)
-  (add-hook 'find-file-hook 'undohist-recover-safe))
 
 (defun make-undohist-file-name (file)
   (setq file (convert-standard-filename (expand-file-name file)))
@@ -163,6 +154,8 @@ To use undohist, you just call this function."
                     (funcall matcher file)))
                 undohist-ignored-files)))
 
+(defvar buffer-undo-list)
+
 (defun undohist-save-1 ()
   (when (and (consp buffer-undo-list)
              (undohist-recover-file-p (buffer-file-name (current-buffer))))
@@ -207,6 +200,15 @@ To use undohist, you just call this function."
   (condition-case var
       (undohist-recover-1)
     (error (message "Can not recover undo history: %s" var))))
+
+(defun undohist-initialize ()
+  "Initialize undo history facilities.
+To use undohist, you just call this function."
+  (interactive)
+  (when (not (file-directory-p undohist-directory))
+    (make-directory undohist-directory t))
+  (add-hook 'before-save-hook #'undohist-save-safe)
+  (add-hook 'find-file-hook #'undohist-recover-safe))
 
 (defun undohist-recover ()
   "Recover undo history."
