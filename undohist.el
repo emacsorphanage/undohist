@@ -1,4 +1,4 @@
-;;; undohist.el --- Persistent undo history for GNU Emacs
+;;; undohist.el --- Persistent undo history for GNU Emacs -*- lexical-binding: t; -*-
 
 ;; Copyright (C) 2009-2015  Tomohiro Matsuyama
 
@@ -57,15 +57,6 @@
   "List of regexps or functions matching file names to ignore the
 recovering of undo history."
   :type 'undohist)
-
-(defun undohist-initialize ()
-  "Initialize undo history facilities.
-To use undohist, you just call this function."
-  (interactive)
-  (if (not (file-directory-p undohist-directory))
-      (make-directory undohist-directory t))
-  (add-hook 'before-save-hook 'undohist-save-safe)
-  (add-hook 'find-file-hook 'undohist-recover-safe))
 
 (defun make-undohist-file-name (file)
   (setq file (convert-standard-filename (expand-file-name file)))
@@ -163,6 +154,8 @@ To use undohist, you just call this function."
                     (funcall matcher file)))
                 undohist-ignored-files)))
 
+(defvar buffer-undo-list)
+
 (defun undohist-save-1 ()
   (when (and (consp buffer-undo-list)
              (undohist-recover-file-p (buffer-file-name (current-buffer))))
@@ -208,50 +201,58 @@ To use undohist, you just call this function."
       (undohist-recover-1)
     (error (message "Can not recover undo history: %s" var))))
 
+(defun undohist-initialize ()
+  "Initialize undo history facilities.
+To use undohist, you just call this function."
+  (interactive)
+  (when (not (file-directory-p undohist-directory))
+    (make-directory undohist-directory t))
+  (add-hook 'before-save-hook #'undohist-save-safe)
+  (add-hook 'find-file-hook #'undohist-recover-safe))
+
 (defun undohist-recover ()
   "Recover undo history."
   (interactive)
   (undohist-recover-safe))
 
 (defun undohist--test ()
-  (require 'cl)
-  (loop for f to 100
-        with filename = "/tmp/undohist-test"
-        with undohist-filename = (make-undohist-file-name filename)
-        with contents do
-        (if (file-exists-p filename)
-            (delete-file filename))
-        (if (file-exists-p undohist-filename)
-            (delete-file undohist-filename))
-        (with-current-buffer (find-file-literally filename)
-          (loop for i to 1000
-                for c = (random 3) do
-                (ignore-errors
-                  (case c
-                    (0 (loop for j to 10 do
-                             (insert (make-string (1+ (random 20))
-                                                  (+ (random 26) 65)))))
-                    (1 (newline))
-                    (2 (insert "\t"))
-                    (3 (forward-line))
-                    (4 (previous-line))
-                    (5 (kill-line))
-                    (6 (kill-paragraph -1))
-                    (7 (yank))
-                    (8 (kill-region (+ (point-min) (randppom (point-max))) (+ (point-min) (random (point-max))))))))
-          (save-buffer)
-          (undohist-save)
-          (kill-buffer (current-buffer)))
-        (with-current-buffer (find-file-literally filename)
-          (undohist-recover)
-          (ignore-errors
-            (while (prog1 t (undo))))
-          (setq contents (buffer-string))
-          (set-buffer-modified-p nil)
-          (kill-buffer (current-buffer))
-          (if (string= contents "")
-              (message "Test succeeded #%s" f)
-            (error "Test failed #%s" f)))))
+  (cl-loop for f to 100
+           with filename = "/tmp/undohist-test"
+           with undohist-filename = (make-undohist-file-name filename)
+           with contents do
+           (if (file-exists-p filename)
+               (delete-file filename))
+           (if (file-exists-p undohist-filename)
+               (delete-file undohist-filename))
+           (with-current-buffer (find-file-literally filename)
+             (cl-loop for i to 1000
+                      for c = (random 3) do
+                      (ignore-errors
+                        (cl-case c
+                          (0 (loop for j to 10 do
+                                   (insert (make-string (1+ (random 20))
+                                                        (+ (random 26) 65)))))
+                          (1 (newline))
+                          (2 (insert "\t"))
+                          (3 (forward-line))
+                          (4 (forward-line -1))
+                          (5 (kill-line))
+                          (6 (kill-paragraph -1))
+                          (7 (yank))
+                          (8 (kill-region (+ (point-min) (randppom (point-max))) (+ (point-min) (random (point-max))))))))
+             (save-buffer)
+             (undohist-save)
+             (kill-buffer (current-buffer)))
+           (with-current-buffer (find-file-literally filename)
+             (undohist-recover)
+             (ignore-errors
+               (while (prog1 t (undo))))
+             (setq contents (buffer-string))
+             (set-buffer-modified-p nil)
+             (kill-buffer (current-buffer))
+             (if (string= contents "")
+                 (message "Test succeeded #%s" f)
+               (error "Test failed #%s" f)))))
 
 (provide 'undohist)
 ;;; undohist.el ends here
