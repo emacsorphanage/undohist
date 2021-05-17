@@ -229,9 +229,9 @@ To use undohist, you just call this function."
                       for c = (random 3) do
                       (ignore-errors
                         (cl-case c
-                          (0 (loop for j to 10 do
-                                   (insert (make-string (1+ (random 20))
-                                                        (+ (random 26) 65)))))
+                          (0 (cl-loop for j to 10 do
+                                      (insert (make-string (1+ (random 20))
+                                                           (+ (random 26) 65)))))
                           (1 (newline))
                           (2 (insert "\t"))
                           (3 (forward-line))
