@@ -201,6 +201,7 @@ recovering of undo history."
       (undohist-recover-1)
     (error (message "Can not recover undo history: %s" var))))
 
+;;;###autoload
 (defun undohist-initialize ()
   "Initialize undo history facilities.
 To use undohist, you just call this function."
