@@ -89,7 +89,8 @@ recovering of undo history."
               (setq cdr (cdr tree))
               (if (consp cdr)
                   (let (next)
-                    (setq next (cons (undohist-walk-tree function (car cdr)) nil))
+                    (setq next (cons (undohist-walk-tree function (car cdr))
+                                     nil))
                     (setcdr cur next)
                     (setq cur next)
                     (setq tree cdr))
@@ -103,7 +104,8 @@ recovering of undo history."
           (cl-loop with length = (length tree)
                    with vector = (make-vector length nil)
                    for i from 0 below length
-                   do (aset vector i (undohist-walk-tree function (aref tree i)))
+                   do (aset vector i
+                            (undohist-walk-tree function (aref tree i)))
                    finally return vector)
         value)))
    (tree (funcall function tree))))
@@ -188,14 +190,16 @@ recovering of undo history."
     (when (and (undohist-recover-file-p file)
                (file-exists-p undo-file)
                (or (null buffer-undo-list)
-                   (yes-or-no-p "buffer-undo-list is not empty. Do you want to recover now? ")))
+                   (yes-or-no-p "\
+buffer-undo-list is not empty. Do you want to recover now? ")))
       (with-temp-buffer
         (insert-file-contents undo-file)
         (goto-char (point-min))
         (let ((alist (undohist-decode (read (current-buffer)))))
           (if (string= (md5 buffer) (assoc-default 'digest alist))
               (setq undo-list (assoc-default 'undo-list alist))
-            (message "File digest doesn't match, so undo history will be discarded."))))
+            (message "\
+File digest doesn't match, so undo history will be discarded."))))
       (when (consp undo-list)
         (setq buffer-undo-list undo-list)))))
 
@@ -234,8 +238,9 @@ To use undohist, you just call this function."
                       (ignore-errors
                         (cl-case c
                           (0 (cl-loop for j to 10 do
-                                      (insert (make-string (1+ (random 20))
-                                                           (+ (random 26) 65)))))
+                                      (insert (make-string
+                                               (1+ (random 20))
+                                               (+ (random 26) 65)))))
                           (1 (newline))
                           (2 (insert "\t"))
                           (3 (forward-line))
@@ -243,7 +248,10 @@ To use undohist, you just call this function."
                           (5 (kill-line))
                           (6 (kill-paragraph -1))
                           (7 (yank))
-                          (8 (kill-region (+ (point-min) (random (point-max))) (+ (point-min) (random (point-max))))))))
+                          (8 (kill-region (+ (point-min)
+                                             (random (point-max)))
+                                          (+ (point-min)
+                                             (random (point-max))))))))
              (save-buffer)
              (undohist-save)
              (kill-buffer (current-buffer)))
