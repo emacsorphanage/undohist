@@ -243,7 +243,7 @@ To use undohist, you just call this function."
                           (5 (kill-line))
                           (6 (kill-paragraph -1))
                           (7 (yank))
-                          (8 (kill-region (+ (point-min) (randppom (point-max))) (+ (point-min) (random (point-max))))))))
+                          (8 (kill-region (+ (point-min) (random (point-max))) (+ (point-min) (random (point-max))))))))
              (save-buffer)
              (undohist-save)
              (kill-buffer (current-buffer)))
