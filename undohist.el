@@ -53,7 +53,10 @@
   "A directory being stored undo history files."
   :type 'undohist)
 
-(defcustom undohist-ignored-files nil
+(defcustom undohist-ignored-files
+  (list (concat "\\`" (file-name-as-directory temporary-file-directory))
+        "\\`/tmp/"
+        "\\`/dev/shm/")
   "List of regexps or functions matching file names to ignore the
 recovering of undo history."
   :type 'undohist)
