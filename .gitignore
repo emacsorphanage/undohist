@@ -3,6 +3,11 @@
 /recipes
 /test
 
+/.eask
+/dist
+
 # ignore generated files.
 *.elc
 
+# OS generated
+.DS_Store
