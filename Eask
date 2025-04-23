@@ -1,3 +1,5 @@
+;; -*- mode: eask; lexical-binding: t -*-
+
 (package "undohist"
          "0.2.1"
          "Persistent undo history for GNU Emacs")
