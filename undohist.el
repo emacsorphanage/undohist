@@ -58,7 +58,8 @@
 (defcustom undohist-ignored-files
   (list (concat "\\`" (file-name-as-directory temporary-file-directory))
         "\\`/tmp/"
-        "\\`/dev/shm/")
+        "\\`/dev/shm/"
+        ".*/\\.git/COMMIT_EDITMSG")
   "List of regexps or functions matching file names to ignore the
 recovering of undo history."
   :type 'undohist)
